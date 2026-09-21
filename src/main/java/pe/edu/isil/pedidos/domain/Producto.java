@@ -58,4 +58,11 @@ public class Producto {
         stock -= cantidad;
     }
 
+    // Metodo para aumentar el stock
+    public void reponerStock(int cantidad) {
+        if (cantidad <= 0){
+            throw new IllegalArgumentException("La cantidad debe ser mayor que cero.");
+        }
+        stock += cantidad;
+    }
 }

@@ -1,6 +1,9 @@
 package pe.edu.isil.pedidos.web;
 
 import jakarta.ejb.EJB;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonReader;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -31,9 +34,34 @@ public class PedidoServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        cargarDatosVista(request);
-        request.getRequestDispatcher("/WEB-INF/views/pedidos.jsp")
-                .forward(request, response);
+
+        try {
+            String action = request.getParameter("action");
+
+            if ("editar".equals(action)) {
+
+                Long pedidoId = Long.valueOf(request.getParameter("pedidoId"));
+                Pedido pedido = pedidoService.buscarPedido(pedidoId);
+
+                if (pedido == null) {
+                    mostrarErrorFound(request, response, "Pedido no encontrado.");
+                    return;
+                } else {
+                    request.setAttribute("pedidoEditar", pedido);
+                }
+            }
+
+            cargarDatosVista(request);
+            request.getRequestDispatcher("/WEB-INF/views/pedidos.jsp")
+                    .forward(request, response);
+
+        } catch (NumberFormatException e) {
+            mostrarErrorNegocio(request, response, "ID de pedido inválido.");
+        } catch (PedidoException e) {
+            mostrarErrorNegocio(request, response, e.getMessage());
+        } catch (RuntimeException e) {
+            mostrarErrorGeneral(request, response);
+        }
     }
 
     /**
@@ -61,8 +89,79 @@ public class PedidoServlet extends HttpServlet {
             // Patrón PRG (Post/Redirect/Get) para evitar reenvíos de formularios
             response.sendRedirect(request.getContextPath() + "/pedidos?creado="
                     + pedido.getId());
+
         } catch (NumberFormatException e) {
             mostrarErrorNegocio(request, response, "Producto o cantidad inválidos.");
+        } catch (PedidoException e) {
+            mostrarErrorNegocio(request, response, e.getMessage());
+        } catch (RuntimeException e) {
+            mostrarErrorGeneral(request, response);
+        }
+    }
+
+    // Metodo PUT, para manejar las actualizaciones
+    @Override
+    protected void doPut(
+            HttpServletRequest request,
+            HttpServletResponse response)
+            throws IOException, ServletException {
+
+        request.setCharacterEncoding(StandardCharsets.UTF_8.name());
+
+        try {
+            JsonObject datos;
+            try (JsonReader rd = Json.createReader(request.getReader())) {
+                datos = rd.readObject();
+            }
+
+            Long pedidoId = Long.valueOf(datos.getString("pedidoId"));
+            String cliente = datos.getString("cliente");
+            Long productoId = Long.valueOf(datos.getString("productoId"));
+            int cantidad = Integer.parseInt(datos.getString("cantidad"));
+
+            if (pedidoService.buscarPedido(pedidoId) == null) {
+                mostrarErrorFound(request, response, "Pedido no encontrado.");
+                return;
+            }
+
+            pedidoService.actualizarPedido(pedidoId, cliente, productoId, cantidad);
+
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.getWriter().write("Pedido actualizado correctamente.");
+
+        } catch (NumberFormatException e) {
+            mostrarErrorNegocio(request, response, "Id de pedido inválido.");
+        } catch (PedidoException e) {
+            mostrarErrorNegocio(request, response, e.getMessage());
+        } catch (RuntimeException e) {
+            mostrarErrorGeneral(request, response);
+        }
+    }
+
+    // Metodo DELETE, para manejar la eliminación de pedidos
+    @Override
+    protected void doDelete(
+            HttpServletRequest request,
+            HttpServletResponse response)
+            throws IOException, ServletException {
+
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+
+        try {
+            Long pedidoId = Long.valueOf(request.getParameter("pedidoId"));
+
+            if (pedidoService.buscarPedido(pedidoId) == null) {
+                mostrarErrorFound(request, response, "Pedido no encontrado.");
+                return;
+            }
+
+            pedidoService.eliminarPedido(pedidoId);
+
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.getWriter().write("Pedido eliminado correctamente.");
+
+        } catch (NumberFormatException e) {
+            mostrarErrorNegocio(request, response, "Id de pedido inválido.");
         } catch (PedidoException e) {
             mostrarErrorNegocio(request, response, e.getMessage());
         } catch (RuntimeException e) {
@@ -124,6 +223,19 @@ public class PedidoServlet extends HttpServlet {
         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 
         request.setAttribute("error", "Ocurrió un error interno al procesar la solicitud.");
+
+        request.getRequestDispatcher("/WEB-INF/views/error.jsp")
+                .forward(request, response);
+    }
+
+    /**
+     * Muestra un mensaje de error de recurso no encontrado en la vista de error.
+     */
+    private void mostrarErrorFound(HttpServletRequest request, HttpServletResponse response, String mensaje)
+            throws ServletException, IOException {
+        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+
+        request.setAttribute("error", mensaje);
 
         request.getRequestDispatcher("/WEB-INF/views/error.jsp")
                 .forward(request, response);

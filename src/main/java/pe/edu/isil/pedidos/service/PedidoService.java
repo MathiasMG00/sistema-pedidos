@@ -140,4 +140,81 @@ public class PedidoService {
         }
     }
 
+    // Metodo para buscar un pedido por su ID
+    public Pedido buscarPedido(Long id) {
+        if (id <= 0 || id == null) {
+            throw new PedidoException("El ID del pedido es inválido.");
+        }
+        return entityManager.find(Pedido.class, id);
+    }
+
+    // Metodo para actualizar un pedido
+    public Pedido actualizarPedido(Long pedidoId, String cliente, Long productoId, int cantidad) {
+        validarDatos(cliente, productoId, cantidad);
+
+        Pedido pedido = buscarPedido(pedidoId);
+        if (pedido == null) {
+            throw new PedidoException("El pedido no existe.");
+        }
+
+        Producto productoNuevo = entityManager.find(Producto.class, productoId);
+
+        if (productoNuevo == null) {
+            throw new PedidoException("El producto no existe.");
+        }
+
+        Producto productoAnterior = pedido.getProducto();
+        int cantidadAnterior = pedido.getCantidad();
+
+        boolean mismoProducto = productoAnterior.getId().equals(productoNuevo.getId());
+
+        try {
+            if (mismoProducto) {
+                int diferencia = cantidad - cantidadAnterior;
+
+                if (diferencia > 0) {
+                    productoAnterior.descontarStock(diferencia);
+                } else if (diferencia < 0) {
+                    productoAnterior.reponerStock(-diferencia);
+                }
+            } else {
+                productoNuevo.descontarStock(cantidad);
+                productoAnterior.reponerStock(cantidadAnterior);
+            }
+
+            BigDecimal total;
+
+            if (mismoProducto && cantidad == cantidadAnterior) {
+                total = pedido.getTotal();
+            } else {
+                total = productoNuevo.getPrecio().multiply(BigDecimal.valueOf(cantidad));
+            }
+
+            pedido.actualizarPedido(
+                    cliente,
+                    productoNuevo,
+                    cantidad,
+                    total);
+
+            return pedido;
+
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw new PedidoException(e.getMessage());
+        }
+    }
+
+    // Metodo para eliminar un pedido
+    public void eliminarPedido(Long pedidoId){
+        Pedido pedido = buscarPedido(pedidoId);
+        if (pedido == null) {
+            throw new PedidoException("El pedido no existe.");
+        }
+        try{
+            Producto producto = pedido.getProducto();
+            producto.reponerStock(pedido.getCantidad());
+            entityManager.remove(pedido);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw new PedidoException(e.getMessage());
+        }
+    }
 }

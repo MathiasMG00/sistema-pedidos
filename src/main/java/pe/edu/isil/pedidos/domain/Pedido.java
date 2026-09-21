@@ -67,4 +67,28 @@ public class Pedido {
         return fecha;
     }
 
+    // Metodo para actualizar los datos
+    public void actualizarPedido(String cliente, Producto producto,
+            int cantidad, BigDecimal total) {
+        if (cliente == null || cliente.isBlank()) {
+            throw new IllegalArgumentException("El cliente es obligatorio.");
+        }
+
+        if (producto == null) {
+            throw new IllegalArgumentException("El producto es obligatorio.");
+        }
+
+        if (cantidad <= 0) {
+            throw new IllegalArgumentException("La cantidad debe ser mayor que cero.");
+        }
+
+        if (total == null || total.signum() < 0) {
+            throw new IllegalArgumentException("El total debe ser un valor mayor o igual a cero.");
+        }
+
+        this.cliente = cliente.trim();
+        this.producto = producto;
+        this.cantidad = cantidad;
+        this.total = total;
+    }
 }
