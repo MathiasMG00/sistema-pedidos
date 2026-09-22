@@ -270,6 +270,7 @@ code {
 }
 
 .btn-actualizar:focus-visible,
+.btn-cancelar:focus-visible,
 .acciones-pedido .accion:focus-visible {
     outline: 3px solid #2563eb;
     outline-offset: 3px;
@@ -279,6 +280,27 @@ code {
 .acciones-pedido button:disabled {
     opacity: 0.55;
     cursor: wait;
+}
+
+.btn-cancelar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    justify-self: start;
+    min-height: 42px;
+    padding: 0 18px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    background: #fff;
+    color: #475569;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 150ms ease;
+}
+
+.btn-cancelar:hover {
+    background: #f1f5f9;
+    color: #1e293b;
 }
 
 @media (max-width: 820px) {
